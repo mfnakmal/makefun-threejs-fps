@@ -50,6 +50,22 @@ export function createWorld(scene) {
   box(0.9, 1.6, 0.9, -10.4, 0.8, 8.4, 'hairline');
   box(0.9, 1.6, 0.9, 10.4, 0.8, 8.4, 'hairline');
 
+  // Tactical Bomb Site and Buy Zone markers
+  box(2.0, 0.05, 2.0, 0, 0.52, -10.0, 'accent'); // Bomb Site Alpha
+  box(1.0, 0.8, 1.0, -1.8, 0.4, -9.5, 'hairline'); // Defusal cover block A
+  box(1.0, 0.8, 1.0, 1.8, 0.4, -9.5, 'hairline'); // Defusal cover block B
+  box(3.0, 0.02, 3.0, 0, 0.01, 8.5, 'hairline'); // CT Buy Zone spawn plate
+
+  // Tactical Economy Definition
+  const ECONOMY = {
+    roundWinBonus: 3250,
+    roundLossBonus: 1400,
+    consecutiveLossIncrement: 500,
+    killRewardRifle: 300,
+    bombPlantBonus: 300,
+    bombDefuseBonus: 300,
+  };
+
   // High-contrast atmospheric lighting: hemisphere skylight, direct sunlight, and cool fill.
   const sky = new THREE.HemisphereLight(new THREE.Color(PALETTE.surface), new THREE.Color(PALETTE.canvas), 1.1);
   scene.add(sky);

@@ -17,6 +17,15 @@ if (existsSync(join(here, 'screenshots'))) {
   cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 }
 
+// Verified tactical FPS runtime configuration
+export const FPS_CONFIG = {
+  tickRate: 60,
+  maxRounds: 15,
+  bombTimer: 45,
+  defuseTime: 5,
+  startingMoney: 800,
+};
+
 // Build the complete verified dossier for judge evaluation
 writeFileSync(
   join(out, 'dossier.json'),
