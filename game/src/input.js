@@ -1,49 +1,60 @@
-// Keyboard and mouse, and the pointer lock that turns the mouse into look. Plain browser
-// APIs only: the game asks the canvas for pointer lock and reads movementX/Y while it holds it.
-export function createInput(canvas, onLockChange) {
+// Tactical Input Controller for KILNFIRE: Pointer Lock, Movement & Weapon Interaction
+export function createInput(canvasDom) {
   const keys = new Set();
-  const state = { keys, locked: false, firing: false, lookX: 0, lookY: 0 };
+  const mouseButtons = new Set();
+  let mouseDeltaX = 0;
+  let mouseDeltaY = 0;
+  let isPointerLocked = false;
 
-  function setKey(event, down) {
-    if (down) keys.add(event.code);
-    else keys.delete(event.code);
-    if (event.code === 'Space') event.preventDefault();
-  }
+  window.addEventListener('keydown', (e) => {
+    keys.add(e.code);
+  });
 
-  window.addEventListener('keydown', (event) => setKey(event, true));
-  window.addEventListener('keyup', (event) => setKey(event, false));
-  window.addEventListener('blur', () => keys.clear());
-  window.addEventListener('mousemove', (event) => {
-    if (!state.locked) return;
-    state.lookX += event.movementX;
-    state.lookY += event.movementY;
+  window.addEventListener('keyup', (e) => {
+    keys.delete(e.code);
   });
-  window.addEventListener('mousedown', (event) => {
-    if (state.locked && event.button === 0) state.firing = true;
+
+  window.addEventListener('mousedown', (e) => {
+    mouseButtons.add(e.button);
   });
-  window.addEventListener('mouseup', (event) => {
-    if (event.button === 0) state.firing = false;
+
+  window.addEventListener('mouseup', (e) => {
+    mouseButtons.delete(e.button);
   });
-  document.addEventListener('pointerlockchange', () => {
-    state.locked = document.pointerLockElement === canvas;
-    if (!state.locked) {
-      keys.clear();
-      state.firing = false;
+
+  window.addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement === canvasDom) {
+      mouseDeltaX += e.movementX;
+      mouseDeltaY += e.movementY;
     }
-    onLockChange(state.locked);
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    isPointerLocked = document.pointerLockElement === canvasDom;
   });
 
   return {
-    state,
-    requestLock() {
-      canvas.requestPointerLock();
+    keys,
+    mouseButtons,
+    isPointerLocked() {
+      return isPointerLocked;
     },
-    takeLook() {
-      const x = state.lookX;
-      const y = state.lookY;
-      state.lookX = 0;
-      state.lookY = 0;
-      return { x, y };
+    requestPointerLock() {
+      if (document.pointerLockElement !== canvasDom) {
+        canvasDom.requestPointerLock?.();
+      }
+    },
+    exitPointerLock() {
+      if (document.pointerLockElement === canvasDom) {
+        document.exitPointerLock?.();
+      }
+    },
+    flushMouse() {
+      const dx = mouseDeltaX;
+      const dy = mouseDeltaY;
+      mouseDeltaX = 0;
+      mouseDeltaY = 0;
+      return { dx, dy };
     },
   };
 }
