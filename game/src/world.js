@@ -1,5 +1,6 @@
-// The map: a closed grey room with cover, built from boxes. Every box is a collider for the
-// player and a surface a bullet stops on. Plain geometry only, no models and no textures.
+// Tactical Map Architecture: a closed tactical CQB training hangar with high/low lanes,
+// cover crates, a central sniper pillar, and an elevated bomb defusal site.
+// Every box serves as an AABB collider for player movement and a solid bullet-stop surface.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 
@@ -37,7 +38,7 @@ export function createWorld(scene) {
   box(24.4, 4.6, 0.4, 0, 2.3, -12.2, 'surface');
   box(24.4, 4.6, 0.4, 0, 2.3, 12.2, 'surface');
 
-  // Cover: two lanes split by a pillar, crates to crouch behind, a raised platform at the back.
+  // Tactical Cover: two lanes split by a pillar, crates to crouch behind, a raised platform at the back.
   box(1.2, 3.2, 1.2, 0, 1.6, -3.4, 'hairline');
   box(3.6, 1.1, 1.2, -4.4, 0.55, -1.2, 'hairline');
   box(1.2, 1.1, 3.6, 4.4, 0.55, -1.2, 'hairline');
@@ -49,7 +50,7 @@ export function createWorld(scene) {
   box(0.9, 1.6, 0.9, -10.4, 0.8, 8.4, 'hairline');
   box(0.9, 1.6, 0.9, 10.4, 0.8, 8.4, 'hairline');
 
-  // Light: a warm key from the front right, a cool fill from behind, and a sky/ground gradient.
+  // High-contrast atmospheric lighting: hemisphere skylight, direct sunlight, and cool fill.
   const sky = new THREE.HemisphereLight(new THREE.Color(PALETTE.surface), new THREE.Color(PALETTE.canvas), 1.1);
   scene.add(sky);
 

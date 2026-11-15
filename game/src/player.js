@@ -1,5 +1,6 @@
-// Player movement: acceleration, friction, gravity, crouch and jump, resolved as a box against
-// the world's colliders one axis at a time, so a wall never swallows the player.
+// Tactical Player Controller: Counter-Strike style acceleration, friction damping,
+// gravity, crouch-peeking, and jump dynamics. Resolved using AABB collision detection
+// on each movement axis independently to ensure crisp, glitch-free tactical movement.
 import * as THREE from 'three';
 
 const RADIUS = 0.34;

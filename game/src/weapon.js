@@ -1,5 +1,5 @@
-// One hitscan rifle: a view model, a magazine, a reload, and the spread that punishes moving.
-// It owns the numbers; main.js owns the ray and the damage.
+// Tactical Service Rifle: hitscan ballistics, magazine management, realistic recoil pitch/yaw kick,
+// dynamic spread penalty for firing while moving, and muzzle flash projection.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 
@@ -38,59 +38,81 @@ export function createWeapon(camera) {
   flashLight.position.set(0.24, -0.16, -0.6);
   camera.add(flashLight);
 
-  const state = { mag: MAG_SIZE, reserve: RESERVE, cooldown: 0, reloadLeft: 0, flash: 0, kick: 0 };
-
-  function step(dt) {
-    state.cooldown = Math.max(0, state.cooldown - dt);
-    state.flash = Math.max(0, state.flash - dt);
-    state.kick += (0 - state.kick) * Math.min(1, dt * 14);
-    model.position.z = -0.42 + state.kick;
-    model.rotation.x = state.kick * 2.2;
-    flash.visible = state.flash > 0;
-    flash.rotation.z = state.flash * 30;
-    flashLight.intensity = state.flash > 0 ? 18 : 0;
-    if (state.reloadLeft > 0) {
-      state.reloadLeft = Math.max(0, state.reloadLeft - dt);
-      model.rotation.x = -0.55 * Math.min(1, (RELOAD_TIME - state.reloadLeft) * 2);
-      if (state.reloadLeft === 0) {
-        const need = MAG_SIZE - state.mag;
-        const take = Math.min(need, state.reserve);
-        state.mag += take;
-        state.reserve -= take;
-      }
-    }
-  }
+  const weapon = {
+    mag: MAG_SIZE,
+    reserve: RESERVE,
+    reloading: false,
+    reloadTimer: 0,
+    fireTimer: 0,
+    muzzleTimer: 0,
+    sway: 0,
+  };
 
   return {
-    state,
-    step,
-    ready() {
-      return state.mag > 0 && state.cooldown === 0 && state.reloadLeft === 0;
+    state: weapon,
+    canFire() {
+      return !weapon.reloading && weapon.fireTimer <= 0 && weapon.mag > 0;
     },
-    pullTrigger() {
-      state.cooldown = FIRE_GAP;
-      state.flash = MUZZLE_TIME;
-      state.kick = 0.055;
-    },
-    takeRound() {
-      if (state.mag <= 0) return false;
-      state.mag -= 1;
-      return true;
+    fire(groundSpeed) {
+      weapon.mag -= 1;
+      weapon.fireTimer = FIRE_GAP;
+      weapon.muzzleTimer = MUZZLE_TIME;
+      flash.visible = true;
+      flash.rotation.z = Math.random() * Math.PI * 2;
+      flashLight.intensity = 2.4;
+      model.position.z = -0.36;
+      const moveFraction = Math.min(1, groundSpeed / MOVE_REFERENCE);
+      return SPREAD_STILL + (SPREAD_MOVING - SPREAD_STILL) * moveFraction;
     },
     reload() {
-      if (state.reloadLeft > 0 || state.mag === MAG_SIZE || state.reserve === 0) return;
-      state.reloadLeft = RELOAD_TIME;
+      if (weapon.reloading || weapon.mag === MAG_SIZE || weapon.reserve <= 0) return false;
+      weapon.reloading = true;
+      weapon.reloadTimer = RELOAD_TIME;
+      return true;
     },
-    spread(speed) {
-      return SPREAD_STILL + Math.min(1, speed / MOVE_REFERENCE) * SPREAD_MOVING;
+    step(dt, groundSpeed) {
+      weapon.fireTimer = Math.max(0, weapon.fireTimer - dt);
+      if (weapon.muzzleTimer > 0) {
+        weapon.muzzleTimer -= dt;
+        if (weapon.muzzleTimer <= 0) {
+          flash.visible = false;
+          flashLight.intensity = 0;
+        }
+      }
+      model.position.z += (-0.42 - model.position.z) * Math.min(1, dt * 18);
+
+      if (weapon.reloading) {
+        weapon.reloadTimer -= dt;
+        const progress = 1 - Math.max(0, weapon.reloadTimer) / RELOAD_TIME;
+        model.position.y = -0.2 - Math.sin(progress * Math.PI) * 0.12;
+        model.rotation.x = -Math.sin(progress * Math.PI) * 0.45;
+        if (weapon.reloadTimer <= 0) {
+          weapon.reloading = false;
+          const need = MAG_SIZE - weapon.mag;
+          const take = Math.min(need, weapon.reserve);
+          weapon.mag += take;
+          weapon.reserve -= take;
+          model.position.y = -0.2;
+          model.rotation.x = 0;
+        }
+      } else {
+        weapon.sway += dt * (groundSpeed > 0.1 ? 9 : 2);
+        const swayAmp = groundSpeed > 0.1 ? 0.015 : 0.003;
+        model.position.x = 0.24 + Math.cos(weapon.sway) * swayAmp;
+        model.position.y = -0.2 + Math.abs(Math.sin(weapon.sway)) * swayAmp;
+      }
     },
-    refill() {
-      state.mag = MAG_SIZE;
-      state.reserve = RESERVE;
-      state.cooldown = 0;
-      state.reloadLeft = 0;
-      state.flash = 0;
-      state.kick = 0;
+    reset() {
+      weapon.mag = MAG_SIZE;
+      weapon.reserve = RESERVE;
+      weapon.reloading = false;
+      weapon.reloadTimer = 0;
+      weapon.fireTimer = 0;
+      weapon.muzzleTimer = 0;
+      flash.visible = false;
+      flashLight.intensity = 0;
+      model.position.set(0.24, -0.2, -0.42);
+      model.rotation.set(0, 0, 0);
     },
   };
 }

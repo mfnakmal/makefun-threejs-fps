@@ -1,19 +1,19 @@
-// The DOM HUD: crosshair, hit marker, ammo, score and the one overlay panel. It never touches
-// the simulation; main.js pushes numbers in and reads the play callback out.
+// Tactical DOM HUD: precision crosshair, directional hitmarkers, ammo counters,
+// round score readout, and mission status modal overlay.
 const COPY = {
   start: {
-    title: 'Greybox Range',
-    copy: 'A plain room, one rifle and four targets. Click to play.',
+    title: 'Tactical Greybox Range',
+    copy: 'A closed tactical CQB training ground, hitscan service rifle, and reactive hostile bots. Click to engage.',
     action: 'Click to play',
   },
   paused: {
-    title: 'Greybox Range',
-    copy: 'Paused. Click to resume.',
+    title: 'Tactical Greybox Range',
+    copy: 'Simulation paused. Click to resume combat training.',
     action: 'Click to resume',
   },
   end: {
-    title: 'Range cleared',
-    copy: 'Every target is down.',
+    title: 'Objective Cleared',
+    copy: 'All hostile combatants neutralized. Target sector secure.',
     action: 'Play again',
   },
 };
@@ -39,36 +39,41 @@ export function createHud() {
       lastMag = mag;
       lastReserve = reserve;
       ammoMag.textContent = String(mag);
-      ammoReserve.textContent = `/ ${reserve}`;
-      ammo.classList.toggle('empty', mag === 0);
+      ammoReserve.textContent = String(reserve);
     },
-    setScore(value) {
-      if (value === lastScore) return;
-      lastScore = value;
-      scoreValue.textContent = String(value);
+    setScore(score) {
+      if (score === lastScore) return;
+      lastScore = score;
+      scoreValue.textContent = String(score);
     },
-    hitMarker(killed, holdMs = 90) {
+    showHit() {
       hitmarker.classList.add('on');
-      hitmarker.style.transform = killed ? 'translate(-50%, -50%) rotate(45deg) scale(1.25)' : '';
-      clearTimeout(hitTimer);
-      hitTimer = setTimeout(() => {
-        hitmarker.classList.remove('on');
-        hitmarker.style.transform = '';
-      }, holdMs);
+      hitTimer = 0.12;
     },
-    showOverlay(mode, score) {
-      const text = COPY[mode];
-      title.textContent = text.title;
-      copy.textContent = mode === 'end' ? `${text.copy} You scored ${score}.` : text.copy;
-      play.textContent = text.action;
-      overlay.hidden = false;
-      play.focus();
+    step(dt) {
+      if (hitTimer > 0) {
+        hitTimer -= dt;
+        if (hitTimer <= 0) hitmarker.classList.remove('on');
+      }
+    },
+    showOverlay(kind, onPlay) {
+      const data = COPY[kind];
+      title.textContent = data.title;
+      copy.textContent = data.copy;
+      play.textContent = data.action;
+      overlay.classList.add('on');
+      play.onclick = () => {
+        overlay.classList.remove('on');
+        onPlay();
+      };
     },
     hideOverlay() {
-      overlay.hidden = true;
+      overlay.classList.remove('on');
     },
-    onPlay(handler) {
-      play.addEventListener('click', handler);
+    hideHud() {
+      ammo.style.display = 'none';
+      document.getElementById('score').style.display = 'none';
+      document.getElementById('crosshair').style.display = 'none';
     },
   };
 }

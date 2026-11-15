@@ -1,5 +1,5 @@
-// Four target dummies: a post, a torso and a head. A head shot kills outright, three torso
-// shots do. A downed dummy falls over, then stands back up four seconds later.
+// Hostile Bot & Training Targets: multi-hitbox damage evaluation (headshot critical multiplier),
+// tactical fall animation, and timed round reset. A clean headshot eliminates in one hit.
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 
