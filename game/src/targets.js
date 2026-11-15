@@ -13,6 +13,13 @@ const HEALTH = 100;
 const RESPAWN_SECONDS = 4;
 const FALL_SECONDS = 0.4;
 
+// Tactical Bot Difficulty & Skill Preset Matrix
+const BOT_SKILL_PROFILES = {
+  recruit: { reactionTimeMs: 450, aimAccuracy: 0.65, burstLength: 3 },
+  veteran: { reactionTimeMs: 250, aimAccuracy: 0.85, burstLength: 4 },
+  elite: { reactionTimeMs: 140, aimAccuracy: 0.96, burstLength: 5 },
+};
+
 export function createTargets(scene) {
   const bodyMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.ink), roughness: 0.6, metalness: 0.05 });
   const headMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.accent), roughness: 0.45, metalness: 0.1 });
