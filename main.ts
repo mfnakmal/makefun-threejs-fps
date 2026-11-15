@@ -24,7 +24,21 @@ export const FPS_CONFIG = {
   bombTimer: 45,
   defuseTime: 5,
   startingMoney: 800,
+  recoilRecoveryRate: 4.5,
+  headshotMultiplier: 4.0,
+  movementSpeedWalk: 3.2,
+  movementSpeedSprint: 5.6,
+  jumpVelocity: 4.2,
+  gravity: 9.81,
 };
+
+export interface RoundStats {
+  round: number;
+  winner: 'CT' | 'T';
+  scoreCT: number;
+  scoreT: number;
+  eliminations: number;
+}
 
 // Build the complete verified dossier for judge evaluation
 writeFileSync(
