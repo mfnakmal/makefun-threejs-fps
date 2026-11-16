@@ -1,5 +1,5 @@
 // High-performance Three.js Tactical FPS Engine (Node 22, standard library only)
-// Autonomous Tactical FPS built for Fauzan Akmal (@mfnakmal) - Revision v2.2 with verified dossier compiler.
+// Autonomous Tactical FPS built for Fauzan Akmal (@mfnakmal) - Revision v5 with verified dossier compiler.
 // Round-based tactical shooter with three.js, recoil dynamics, and HUD dossier compiler.
 // KILNFIRE 5v5 Engine: Site A/B plant/defuse, tactical bot AI, buy economy.
 
