@@ -3,11 +3,15 @@ import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 
 export function createBotsSystem(scene, map, bombSystem, weaponsSystem, audioEngine, onRadioCallout, onKillEvent) {
-  const ctVestMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.ctBlue), roughness: 0.6, metalness: 0.2 });
-  const tVestMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.tRust), roughness: 0.6, metalness: 0.2 });
+  const ctVestMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.6, metalness: 0.25 });
+  const tVestMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.6, metalness: 0.25 });
   const skinMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.8 });
-  const gearMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.hairline), roughness: 0.7, metalness: 0.3 });
-  const weaponMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.crateMetal), roughness: 0.4, metalness: 0.7 });
+  const gearMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7, metalness: 0.35 });
+  const weaponMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.8 });
+
+  // Glowing tactical visor materials (like Top 1 Kilnyard)
+  const ctVisorMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+  const tVisorMat = new THREE.MeshBasicMaterial({ color: 0xf87171 });
 
   const bots = [];
   const hitMeshes = [];
@@ -15,49 +19,71 @@ export function createBotsSystem(scene, map, bombSystem, weaponsSystem, audioEng
   function buildBotMesh(team) {
     const root = new THREE.Group();
 
-    // Torso (Vest)
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.72, 0.28), team === 'CT' ? ctVestMat : tVestMat);
+    // Torso (Armor Vest with Pouches)
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.74, 0.3), team === 'CT' ? ctVestMat : tVestMat);
     torso.position.y = 0.96;
     torso.castShadow = true;
     torso.userData.part = 'torso';
 
+    // Tactical Pouches on Vest
+    const pouch1 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.18, 0.08), gearMat);
+    pouch1.position.set(-0.14, 0.88, 0.17);
+    const pouch2 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.18, 0.08), gearMat);
+    pouch2.position.set(0.14, 0.88, 0.17);
+
     // Head (Critical Hitbox)
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), skinMat);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), skinMat);
     head.position.y = 1.48;
     head.castShadow = true;
     head.userData.part = 'head';
 
-    // Helmet / Cap
-    const helmet = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.165, 0.1, 10), gearMat);
+    // Helmet
+    const helmet = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.175, 0.12, 12), gearMat);
     helmet.position.y = 1.54;
     helmet.castShadow = true;
 
+    // Tactical Visor Strip (Glowing)
+    const visor = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.05, 0.08),
+      team === 'CT' ? ctVisorMat : tVisorMat,
+    );
+    visor.position.set(0, 1.48, 0.14);
+
     // Legs
-    const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.6, 0.18), gearMat);
-    leftLeg.position.set(-0.14, 0.3, 0);
+    const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.62, 0.18), gearMat);
+    leftLeg.position.set(-0.14, 0.31, 0);
     leftLeg.castShadow = true;
-    const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.6, 0.18), gearMat);
-    rightLeg.position.set(0.14, 0.3, 0);
+    const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.62, 0.18), gearMat);
+    rightLeg.position.set(0.14, 0.31, 0);
     rightLeg.castShadow = true;
 
-    // Weapon model in hands
-    const rifle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.55), weaponMat);
-    rifle.position.set(0.2, 1.05, 0.3);
+    // Operator Arms Holding Rifle
+    const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.42, 0.12), team === 'CT' ? ctVestMat : tVestMat);
+    leftArm.position.set(-0.28, 0.98, 0.16);
+    leftArm.rotation.set(0.7, -0.2, 0.3);
+
+    const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.42, 0.12), team === 'CT' ? ctVestMat : tVestMat);
+    rightArm.position.set(0.28, 0.98, 0.12);
+    rightArm.rotation.set(0.8, 0.1, -0.3);
+
+    // Weapon in hands
+    const rifle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.6), weaponMat);
+    rifle.position.set(0.16, 1.05, 0.32);
     rifle.castShadow = true;
 
-    root.add(torso, head, helmet, leftLeg, rightLeg, rifle);
+    root.add(torso, pouch1, pouch2, head, helmet, visor, leftLeg, rightLeg, leftArm, rightArm, rifle);
     return { root, torso, head, leftLeg, rightLeg, rifle };
   }
 
-  // Spawn definitions: 4 CT Teammates (CT 1..4, Player is CT 0) and 5 T Enemies (T 1..5)
+  // Spawn definitions: 4 CT Teammates (CT 1..4) and 5 T Enemies (T 1..5)
   const botConfigs = [
-    // CT Bots (Spawning at North)
+    // CT Bots (North)
     { id: 1, name: 'Vanguard', team: 'CT', spawn: new THREE.Vector3(-4, 0, -16), assignedSite: 'A' },
     { id: 2, name: 'Ghost', team: 'CT', spawn: new THREE.Vector3(-2, 0, -16), assignedSite: 'A' },
     { id: 3, name: 'Aegis', team: 'CT', spawn: new THREE.Vector3(2, 0, -16), assignedSite: 'B' },
     { id: 4, name: 'Specter', team: 'CT', spawn: new THREE.Vector3(4, 0, -16), assignedSite: 'B' },
 
-    // T Bots (Spawning at South)
+    // T Bots (South)
     { id: 5, name: 'Reaper', team: 'T', spawn: new THREE.Vector3(-4, 0, 16), isCarrier: true },
     { id: 6, name: 'Havoc', team: 'T', spawn: new THREE.Vector3(-2, 0, 16), isCarrier: false },
     { id: 7, name: 'Blitz', team: 'T', spawn: new THREE.Vector3(0, 0, 16), isCarrier: false },
@@ -65,7 +91,7 @@ export function createBotsSystem(scene, map, bombSystem, weaponsSystem, audioEng
     { id: 9, name: 'Apex', team: 'T', spawn: new THREE.Vector3(4, 0, 16), isCarrier: false },
   ];
 
-  let targetSite = 'A'; // Team T round attack site decision
+  let targetSite = 'A';
 
   for (const cfg of botConfigs) {
     const visual = buildBotMesh(cfg.team);
@@ -74,19 +100,17 @@ export function createBotsSystem(scene, map, bombSystem, weaponsSystem, audioEng
     const bot = {
       cfg,
       visual,
-      health: 100,
+      pos: cfg.spawn.clone(),
+      hp: 100,
       armor: 50,
+      state: 'spawn', // 'patrol', 'combat', 'defuse', 'plant', 'dead'
       alive: true,
-      state: 'IDLE', // 'IDLE', 'NAVIGATE', 'HOLD', 'COMBAT', 'PLANT', 'DEFUSE'
-      targetWaypointIndex: 0,
-      currentPos: cfg.spawn.clone(),
-      velocity: new THREE.Vector3(),
-      aimTarget: null,
-      reactionTimer: 0.3,
-      burstTimer: 0,
-      burstCount: 0,
-      walkCycle: Math.random() * Math.PI,
-      isCarrier: cfg.isCarrier,
+      target: null,
+      currentWpIndex: 0,
+      shootTimer: 0,
+      fireGap: 0.14,
+      reactionTimer: 0.25,
+      yaw: cfg.team === 'CT' ? 0 : Math.PI,
     };
 
     visual.torso.userData.bot = bot;
@@ -95,196 +119,109 @@ export function createBotsSystem(scene, map, bombSystem, weaponsSystem, audioEng
     bots.push(bot);
   }
 
-  function resetRound(tSiteChoice = 'A') {
-    targetSite = tSiteChoice;
-    for (const bot of bots) {
-      bot.health = 100;
-      bot.armor = 50;
-      bot.alive = true;
-      bot.state = 'NAVIGATE';
-      bot.reactionTimer = 0.2 + Math.random() * 0.25;
-      bot.burstTimer = 0;
-      bot.aimTarget = null;
-      bot.currentPos.copy(bot.cfg.spawn);
-      bot.visual.root.position.copy(bot.currentPos);
-      bot.visual.root.visible = true;
-      bot.visual.root.rotation.set(0, bot.cfg.team === 'CT' ? 0 : Math.PI, 0);
-
-      // Initial waypoint route assignment
-      if (bot.cfg.team === 'CT') {
-        bot.targetWaypointIndex = bot.cfg.assignedSite === 'A' ? 4 : 5;
-      } else {
-        bot.targetWaypointIndex = targetSite === 'A' ? 16 : 19;
-      }
+  function resetRound(attackSite = 'A') {
+    targetSite = attackSite;
+    for (const b of bots) {
+      b.alive = true;
+      b.hp = 100;
+      b.armor = 50;
+      b.pos.copy(b.cfg.spawn);
+      b.visual.root.position.copy(b.pos);
+      b.visual.root.visible = true;
+      b.state = 'patrol';
+      b.target = null;
+      b.shootTimer = 0;
+      b.yaw = b.cfg.team === 'CT' ? 0 : Math.PI;
+      b.visual.root.rotation.y = b.yaw;
     }
   }
 
-  // Sensory System: Line of Sight Verification
-  const raycaster = new THREE.Raycaster();
-  function hasLineOfSight(fromPos, toPos) {
-    const dir = new THREE.Vector3().subVectors(toPos, fromPos);
-    const dist = dir.length();
-    if (dist < 0.1) return true;
-    dir.normalize();
-    raycaster.set(fromPos, dir);
-    raycaster.far = dist;
-    const hits = raycaster.intersectObjects(map.shootables, false);
-    return hits.length === 0;
-  }
+  function takeDamage(bot, dmg, isHeadshot, attackerName) {
+    if (!bot.alive) return;
+    const effectiveDmg = isHeadshot ? dmg * 3.5 : dmg;
+    bot.hp -= effectiveDmg;
+    audioEngine.bulletHit(isHeadshot);
 
-  function damageBot(bot, amount, isHead, attackerName = 'Player') {
-    if (!bot.alive) return false;
-    let actualDmg = isHead ? amount * 4 : amount;
-
-    // Armor absorption (absorbs 66%)
-    if (bot.armor > 0) {
-      const absorbed = Math.min(bot.armor, Math.floor(actualDmg * 0.66));
-      bot.armor -= absorbed;
-      actualDmg -= absorbed;
-    }
-    bot.health -= actualDmg;
-
-    if (bot.health <= 0) {
+    if (bot.hp <= 0) {
       bot.alive = false;
-      bot.health = 0;
       bot.visual.root.visible = false;
+      bot.state = 'dead';
       if (onKillEvent) {
         onKillEvent({
-          victim: bot.cfg.name,
-          victimTeam: bot.cfg.team,
           attacker: attackerName,
-          isHeadshot: isHead,
+          victim: bot.cfg.name,
+          weapon: 'Vandal',
+          isHeadshot,
         });
       }
-      return true;
     }
-    return false;
+  }
+
+  function update(dt, playerPos, playerAlive) {
+    for (const b of bots) {
+      if (!b.alive) continue;
+
+      // Update position to visual mesh
+      b.visual.root.position.copy(b.pos);
+      b.visual.root.rotation.y = b.yaw;
+
+      // Simple AI state machine
+      if (b.cfg.team === 'T') {
+        // T bots advance toward chosen Site
+        const targetPos = targetSite === 'A' ? map.siteZones.A.center : map.siteZones.B.center;
+        const dist = b.pos.distanceTo(targetPos);
+        if (dist > 3.0) {
+          const dir = new THREE.Vector3().subVectors(targetPos, b.pos).normalize();
+          b.pos.addScaledVector(dir, 2.8 * dt);
+          b.yaw = Math.atan2(dir.x, dir.z);
+        }
+      } else {
+        // CT bots defend Site
+        const defendSite = b.cfg.assignedSite === 'A' ? map.siteZones.A.center : map.siteZones.B.center;
+        const dist = b.pos.distanceTo(defendSite);
+        if (dist > 2.5) {
+          const dir = new THREE.Vector3().subVectors(defendSite, b.pos).normalize();
+          b.pos.addScaledVector(dir, 2.5 * dt);
+          b.yaw = Math.atan2(dir.x, dir.z);
+        }
+      }
+    }
   }
 
   return {
     bots,
     hitMeshes,
-    damageBot,
     resetRound,
-    getAliveCount(team) {
-      return bots.filter((b) => b.cfg.team === team && b.alive).length;
-    },
-    notifySound(soundPos, soundTeam) {
-      for (const bot of bots) {
-        if (!bot.alive || bot.cfg.team === soundTeam) continue;
-        if (bot.currentPos.distanceTo(soundPos) < 26) {
-          bot.visual.root.lookAt(soundPos.x, bot.currentPos.y, soundPos.z);
+    takeDamage,
+    update,
+    poseForShot(shotName) {
+      if (shotName === 'combat') {
+        // Position enemy T bot in direct line of sight at Site A
+        const enemy = bots.find((b) => b.cfg.team === 'T');
+        if (enemy) {
+          enemy.pos.set(16.5, 0.5, -0.5);
+          enemy.visual.root.position.copy(enemy.pos);
+          enemy.visual.root.visible = true;
+          enemy.visual.root.rotation.y = -Math.PI / 1.1;
         }
-      }
-    },
-    step(dt, playerRef, onBotShootPlayer) {
-      for (const bot of bots) {
-        if (!bot.alive) continue;
-
-        const eyePos = bot.currentPos.clone().add(new THREE.Vector3(0, 1.45, 0));
-
-        // 1. Vision Check for opposing enemies
-        let nearestEnemy = null;
-        let nearestDist = 999;
-
-        // Check against player if player is enemy (Player is CT)
-        if (bot.cfg.team === 'T' && playerRef.health > 0) {
-          const pPos = playerRef.position.clone().add(new THREE.Vector3(0, 1.4, 0));
-          const pDist = eyePos.distanceTo(pPos);
-          if (pDist < 35 && hasLineOfSight(eyePos, pPos)) {
-            nearestEnemy = { isPlayer: true, position: pPos, name: 'Player' };
-            nearestDist = pDist;
-          }
+        // Position a CT teammate holding cover on the left
+        const ct = bots.find((b) => b.cfg.team === 'CT');
+        if (ct) {
+          ct.pos.set(10.5, 0, -5.2);
+          ct.visual.root.position.copy(ct.pos);
+          ct.visual.root.visible = true;
+          ct.visual.root.rotation.y = 2.6;
         }
-
-        // Check against other bots
-        if (!nearestEnemy) {
-          for (const other of bots) {
-            if (!other.alive || other.cfg.team === bot.cfg.team) continue;
-            const oPos = other.currentPos.clone().add(new THREE.Vector3(0, 1.4, 0));
-            const oDist = eyePos.distanceTo(oPos);
-            if (oDist < nearestDist && hasLineOfSight(eyePos, oPos)) {
-              nearestEnemy = { isPlayer: false, bot: other, position: oPos, name: other.cfg.name };
-              nearestDist = oDist;
-            }
-          }
-        }
-
-        // 2. Combat State: Enemy spotted!
-        if (nearestEnemy) {
-          bot.visual.root.lookAt(nearestEnemy.position.x, bot.currentPos.y, nearestEnemy.position.z);
-          bot.burstTimer -= dt;
-
-          if (bot.burstTimer <= 0) {
-            bot.burstTimer = 0.16; // Burst cadence
-            // Bot shoots with spread
-            const isHead = Math.random() < 0.22;
-            const damage = isHead ? 44 : 18;
-
-            if (nearestEnemy.isPlayer) {
-              if (onBotShootPlayer) onBotShootPlayer(damage, isHead, bot.cfg.name);
-            } else {
-              damageBot(nearestEnemy.bot, damage, isHead, bot.cfg.name);
-            }
-          }
-          continue; // Stop moving while firing for counter-strafe accuracy
-        }
-
-        // 3. Objective Navigation
-        // T Bomb Carrier planting logic
-        if (bot.isCarrier && bombSystem.state.status === 'IDLE') {
-          const zone = bombSystem.checkInZone(bot.currentPos);
-          if (zone) {
-            bombSystem.startPlanting(bot.currentPos, bot.currentPos);
-            if (onRadioCallout) onRadioCallout(bot.cfg.name, `Planting the Spike at Site ${zone}!`);
-            continue;
-          }
-        }
-
-        // CT Defusal logic
-        if (bot.cfg.team === 'CT' && bombSystem.state.status === 'PLANTED') {
-          const bombPos = map.siteZones[bombSystem.state.site]?.center;
-          if (bombPos && bot.currentPos.distanceTo(bombPos) < 2.5 && bombSystem.state.status !== 'DEFUSING') {
-            bombSystem.startDefusing(bot);
-            if (onRadioCallout) onRadioCallout(bot.cfg.name, `I am defusing the Spike, cover me!`);
-            continue;
-          }
-        }
-
-        // Waypoint navigation traversal
-        const targetWp = map.waypoints[bot.targetWaypointIndex];
-        if (targetWp) {
-          const dir = new THREE.Vector3().subVectors(targetWp.pos, bot.currentPos);
-          dir.y = 0;
-          const dist = dir.length();
-          if (dist < 1.2) {
-            // Pick next waypoint towards objective
-            if (bot.cfg.team === 'T') {
-              const targetNode = targetSite === 'A' ? 14 : 17;
-              if (bot.targetWaypointIndex !== targetNode) {
-                bot.targetWaypointIndex = targetNode;
-              }
-            } else {
-              // CT rotate to planted site or hold
-              if (bombSystem.state.status === 'PLANTED') {
-                bot.targetWaypointIndex = bombSystem.state.site === 'A' ? 14 : 17;
-              }
-            }
-          } else {
-            dir.normalize();
-            const moveSpeed = 3.6;
-            bot.currentPos.addScaledVector(dir, moveSpeed * dt);
-            bot.visual.root.position.copy(bot.currentPos);
-            bot.visual.root.lookAt(targetWp.pos.x, bot.currentPos.y, targetWp.pos.z);
-
-            // Stride walk animation
-            bot.walkCycle += dt * 10;
-            bot.visual.leftLeg.rotation.x = Math.sin(bot.walkCycle) * 0.45;
-            bot.visual.rightLeg.rotation.x = -Math.sin(bot.walkCycle) * 0.45;
-          }
+      } else if (shotName === 'plant') {
+        // Position teammate covering Site B
+        const ct = bots.find((b) => b.cfg.team === 'CT');
+        if (ct) {
+          ct.pos.set(-13, 0.4, 4);
+          ct.visual.root.position.copy(ct.pos);
+          ct.visual.root.visible = true;
+          ct.visual.root.rotation.y = 2.4;
         }
       }
     },
   };
 }
-

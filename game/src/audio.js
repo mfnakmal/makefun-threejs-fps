@@ -111,6 +111,18 @@ export function createAudioEngine() {
       playTone(800, 0.04, 'triangle', 0.1);
     },
 
+    weaponEquip(weaponKey) {
+      playTone(480, 0.05, 'triangle', 0.12);
+    },
+
+    reloadStart() {
+      playTone(400, 0.06, 'square', 0.12);
+    },
+
+    reloadFinish() {
+      playTone(520, 0.07, 'square', 0.15);
+    },
+
     reload() {
       const ctx = getAudioContext();
       if (!ctx) return;

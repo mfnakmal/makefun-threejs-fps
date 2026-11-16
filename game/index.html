@@ -6,16 +6,18 @@
 <title>KILNFIRE: 5v5 Round-Based Tactical FPS (Buy Economy, Plant/Defuse & Bot AI)</title>
 <style>
   :root {
-    --canvas: #0f1115;
-    --surface: #1b1f26;
-    --hairline: #2d3440;
-    --ink: #f0ede6;
-    --muted: #8490a0;
-    --accent: #ff9f1c;
-    --ct-blue: #3a86ff;
-    --t-rust: #e63946;
-    --site-a: #06d6a0;
-    --site-b: #ffd166;
+    --canvas: #12151c;
+    --surface: #1a202c;
+    --surface-card: #242c3d;
+    --hairline: #334155;
+    --ink: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #f59e0b;
+    --gold: #fbbf24;
+    --ct-blue: #38bdf8;
+    --t-rust: #f87171;
+    --site-a: #34d399;
+    --site-b: #fbbf24;
     --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   }
@@ -29,286 +31,474 @@
     font-family: var(--font-ui);
   }
   #game, #game canvas { position: fixed; inset: 0; display: block; }
-  #hud { position: fixed; inset: 0; pointer-events: none; }
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+
+  /* Circular Minimap Radar (Top-Left) */
+  #radar-panel {
+    position: absolute;
+    top: 18px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 50%;
+    padding: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+  #radar {
+    display: block;
+    border-radius: 50%;
+  }
+  .radar-zone-tag {
+    position: absolute;
+    bottom: -22px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+  }
 
   /* Top Tournament Scoreboard Bar */
   #top-bar {
-    position: fixed;
-    top: 16px;
+    position: absolute;
+    top: 14px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 20px;
-    background: rgba(15, 17, 21, 0.85);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--hairline);
+    gap: 16px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 6px;
-    padding: 8px 20px;
+    padding: 6px 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   }
-  .team-status { display: flex; align-items: center; gap: 12px; }
-  .team-name { font-weight: 700; font-size: 13px; letter-spacing: 0.08em; }
-  .team-score { font-family: var(--font-mono); font-size: 26px; font-weight: 800; min-width: 32px; text-align: center; }
+  .team-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .team-name {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+  .team-score {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 900;
+    min-width: 28px;
+    text-align: center;
+  }
   .ct-text { color: var(--ct-blue); }
   .t-text { color: var(--t-rust); }
-
-  .pips { display: flex; gap: 4px; }
-  .pip { width: 9px; height: 16px; border-radius: 2px; background: #28303d; transition: background-color 150ms; }
-  .pip.alive.ct { background: var(--ct-blue); }
-  .pip.alive.t { background: var(--t-rust); }
-  .pip.dead { opacity: 0.25; background: #222; }
-
-  #round-center { text-align: center; min-width: 130px; }
-  #round-timer { font-family: var(--font-mono); font-size: 24px; font-weight: 800; line-height: 1; }
-  #round-number { font-size: 10px; color: var(--muted); letter-spacing: 0.06em; margin-top: 3px; }
-
-  /* Crosshair & Hitmarker */
-  #crosshair {
-    --gap: 6px;
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    width: 24px;
-    height: 24px;
-    transform: translate(-50%, -50%);
-  }
-  #crosshair i { position: absolute; background: #ffffff; opacity: 0.95; }
-  #crosshair i:nth-child(1) { left: 11px; top: calc(11px - var(--gap) - 6px); width: 2px; height: 6px; }
-  #crosshair i:nth-child(2) { left: 11px; top: calc(11px + var(--gap) + 2px); width: 2px; height: 6px; }
-  #crosshair i:nth-child(3) { top: 11px; left: calc(11px - var(--gap) - 6px); height: 2px; width: 6px; }
-  #crosshair i:nth-child(4) { top: 11px; left: calc(11px + var(--gap) + 2px); height: 2px; width: 6px; }
-
-  #hitmarker {
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    width: 24px;
-    height: 24px;
-    transform: translate(-50%, -50%) rotate(45deg);
-    opacity: 0;
-    transition: opacity 60ms linear;
-  }
-  #hitmarker.on { opacity: 1; }
-  #hitmarker.headshot { opacity: 1; filter: drop-shadow(0 0 6px var(--t-rust)); }
-  #hitmarker i { position: absolute; background: var(--accent); }
-  #hitmarker.headshot i { background: #ff2233; }
-  #hitmarker i:nth-child(1) { left: 11px; top: 0; width: 2px; height: 7px; }
-  #hitmarker i:nth-child(2) { left: 11px; bottom: 0; width: 2px; height: 7px; }
-  #hitmarker i:nth-child(3) { top: 11px; left: 0; height: 2px; width: 7px; }
-  #hitmarker i:nth-child(4) { top: 11px; right: 0; height: 2px; width: 7px; }
-
-  /* Player Stats (Bottom Left) */
-  #player-stats {
-    position: fixed;
-    left: 32px;
-    bottom: 24px;
+  #round-center {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    background: rgba(15, 17, 21, 0.85);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--hairline);
-    border-radius: 6px;
-    padding: 12px 18px;
-    min-width: 220px;
+    align-items: center;
+    padding: 0 12px;
+    border-left: 1px solid var(--hairline);
+    border-right: 1px solid var(--hairline);
   }
-  .stat-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
-  .stat-label { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; }
-  .stat-val { font-family: var(--font-mono); font-size: 26px; font-weight: 800; line-height: 1; }
-  .stat-bar-bg { height: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; overflow: hidden; margin-top: 4px; }
-  .stat-bar { height: 100%; transition: width 150ms ease-out; }
-  #hp-bar { background: #10b981; }
-  #armor-bar { background: var(--ct-blue); }
-  #money-value { font-family: var(--font-mono); font-size: 20px; color: #34d399; font-weight: 700; }
+  #round-timer {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: 0.04em;
+  }
+  #round-number {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  .pips {
+    display: flex;
+    gap: 3px;
+  }
+  .pip {
+    width: 6px;
+    height: 14px;
+    background: var(--hairline);
+    border-radius: 1px;
+  }
+  .pip.alive-ct { background: var(--ct-blue); }
+  .pip.alive-t { background: var(--t-rust); }
 
-  /* Weapon & Ammo (Bottom Right) */
-  #weapon-panel {
-    position: fixed;
-    right: 32px;
+  /* Crosshair */
+  #crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+  }
+  #crosshair i {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 2px #000;
+  }
+  #crosshair i:nth-child(1) { top: 0; left: 11px; width: 2px; height: 7px; }
+  #crosshair i:nth-child(2) { bottom: 0; left: 11px; width: 2px; height: 7px; }
+  #crosshair i:nth-child(3) { left: 0; top: 11px; width: 7px; height: 2px; }
+  #crosshair i:nth-child(4) { right: 0; top: 11px; width: 7px; height: 2px; }
+
+  /* Bottom-Left KPI Badges */
+  #player-stats {
+    position: absolute;
     bottom: 24px;
-    text-align: right;
-    background: rgba(15, 17, 21, 0.85);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--hairline);
-    border-radius: 6px;
-    padding: 12px 20px;
-    min-width: 200px;
+    left: 24px;
+    display: flex;
+    gap: 12px;
   }
-  #weapon-name { font-size: 15px; font-weight: 700; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 4px; }
-  #ammo { font-family: var(--font-mono); font-size: 42px; font-weight: 800; line-height: 1; }
-  #ammo-mag { color: var(--ink); }
-  #ammo-reserve { font-size: 18px; color: var(--muted); }
+  .kpi-card {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 4px;
+    padding: 8px 16px;
+    min-width: 90px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  .kpi-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .kpi-val {
+    font-family: var(--font-mono);
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--ink);
+  }
 
-  /* Killfeed & Radio (Top Right) */
-  #killfeed {
-    position: fixed;
-    top: 20px;
+  /* Bottom-Right Weapon Panel */
+  #weapon-panel {
+    position: absolute;
+    bottom: 24px;
     right: 24px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .weapon-card {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 4px;
+    padding: 8px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  #weapon-name {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 2px;
+  }
+  .gear-strip {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+  }
+  .gear-strip span.active { color: var(--gold); }
+  .ammo-box {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--ink);
+    min-width: 100px;
+    text-align: center;
+  }
+  .ammo-box span.sub { font-size: 16px; color: var(--muted); font-weight: 600; }
+
+  /* Center Bomb Planting / Defuse Progress */
+  #action-prompt {
+    position: absolute;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 4px;
+    padding: 10px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 280px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  }
+  #action-prompt[hidden] { display: none; }
+  .action-title {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+  .action-bar-track {
+    width: 100%;
+    height: 8px;
+    background: #1e293b;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .action-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    border-radius: 3px;
+  }
+  .action-hint {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .action-hint kbd {
+    background: #334155;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #fff;
+    font-family: var(--font-mono);
+  }
+
+  /* Killfeed & Radio Feed */
+  #killfeed {
+    position: absolute;
+    top: 18px;
+    right: 20px;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-width: 320px;
+    align-items: flex-end;
   }
   .kill-item {
-    font-size: 12px;
-    background: rgba(20, 24, 30, 0.9);
+    background: rgba(15, 23, 42, 0.85);
     border-left: 3px solid var(--accent);
-    padding: 6px 12px;
-    border-radius: 3px;
-    color: var(--ink);
-    font-family: var(--font-mono);
-  }
-  .kill-att { font-weight: 700; color: #60a5fa; }
-  .kill-vic { font-weight: 700; color: #f87171; }
-  .kill-wep { color: var(--accent); }
-
-  #radio-feed {
-    position: fixed;
-    bottom: 120px;
-    left: 32px;
-    background: rgba(15, 17, 21, 0.85);
-    border-left: 3px solid var(--ct-blue);
-    padding: 6px 12px;
+    padding: 5px 12px;
     font-size: 12px;
-    color: #93c5fd;
-    font-family: var(--font-mono);
-    opacity: 0;
-    transition: opacity 200ms;
+    font-weight: 700;
+    display: flex;
+    gap: 8px;
+    border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
-
-  /* Objective Action Prompt (Center Bottom) */
-  #action-prompt {
-    position: fixed;
-    bottom: 140px;
+  #radio-feed {
+    position: absolute;
+    bottom: 90px;
     left: 50%;
     transform: translateX(-50%);
-    display: none;
-    background: rgba(15, 17, 21, 0.95);
-    border: 1px solid var(--accent);
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 4px;
-    padding: 10px 24px;
-    text-align: center;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.04em;
   }
-  #action-prompt .text { font-size: 13px; font-weight: 800; letter-spacing: 0.08em; color: var(--accent); }
-  #action-prompt .bar-bg { width: 180px; height: 6px; background: #222; border-radius: 3px; margin: 8px auto 0; overflow: hidden; }
-  #action-prompt .bar { width: 0%; height: 100%; background: var(--accent); transition: width 60ms linear; }
+  #radio-feed[hidden] { display: none; }
+  #radio-feed span.radio-tag { color: var(--gold); margin-right: 6px; }
 
-  /* Round Winner Banner */
-  #round-banner {
-    position: fixed;
-    top: 30%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: none;
-    text-align: center;
-    background: rgba(10, 12, 16, 0.94);
-    border: 2px solid var(--accent);
-    border-radius: 8px;
-    padding: 24px 48px;
-  }
-  #round-banner h2 { margin: 0 0 8px; font-size: 38px; font-weight: 900; letter-spacing: 0.04em; color: var(--ink); }
-  #round-banner p { margin: 0; font-size: 15px; color: var(--muted); }
-
-  /* Buy Menu Modal */
+  /* Full Requisition Buy Menu Modal */
   #buy-menu {
     position: fixed;
     inset: 0;
-    background: rgba(10, 12, 16, 0.88);
-    backdrop-filter: blur(12px);
-    display: grid;
-    place-items: center;
-    pointer-events: auto;
+    background: rgba(10, 15, 25, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
   }
   #buy-menu[hidden] { display: none; }
   .buy-dialog {
-    width: min(840px, 94%);
-    background: var(--surface);
-    border: 1px solid var(--hairline);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.3);
     border-radius: 8px;
-    padding: 28px;
+    padding: 24px 32px;
+    width: 1040px;
+    max-width: 95vw;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
   }
   .buy-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
     border-bottom: 1px solid var(--hairline);
     padding-bottom: 14px;
+    margin-bottom: 20px;
   }
-  .buy-header h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.04em; color: var(--ink); }
-  .buy-grid {
+  .buy-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: var(--ink);
+  }
+  .buy-cash {
+    font-family: var(--font-mono);
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--gold);
+  }
+  .buy-columns {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+  }
+  .buy-col-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--hairline);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
   }
   .buy-card {
-    background: #14171d;
+    background: var(--surface-card);
     border: 1px solid var(--hairline);
-    border-radius: 6px;
-    padding: 16px;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    min-height: 100px;
   }
-  .buy-card h3 { margin: 0 0 4px; font-size: 16px; font-weight: 700; color: var(--ink); }
-  .buy-card .desc { font-size: 12px; color: var(--muted); margin-bottom: 12px; min-height: 32px; }
-  .buy-card .price { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: #34d399; margin-bottom: 12px; }
-  .buy-btn {
-    background: var(--accent);
-    color: #111;
-    font-weight: 700;
+  .buy-card.owned {
+    border-color: rgba(52, 211, 153, 0.4);
+  }
+  .buy-card-name {
     font-size: 13px;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: background 120ms;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 2px;
   }
-  .buy-btn:hover { background: #ffa834; }
+  .buy-card-stats {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .buy-card-price {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: #34d399;
+  }
+  .buy-card-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--site-a);
+    background: rgba(52, 211, 153, 0.15);
+    padding: 2px 6px;
+    border-radius: 3px;
+    align-self: flex-start;
+  }
 
-  /* Start / Instruction Overlay */
+  /* 5v5 Match End Victory Scoreboard Modal */
+  #victory-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 25, 0.8);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+  }
+  #victory-modal[hidden] { display: none; }
+  .victory-dialog {
+    background: rgba(15, 23, 42, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 8px;
+    padding: 24px 32px;
+    width: 860px;
+    max-width: 95vw;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.85);
+  }
+  .victory-title {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    color: var(--ink);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .victory-sub {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 20px;
+    letter-spacing: 0.05em;
+  }
+  .score-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 12px;
+  }
+  .score-table th {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-align: right;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .score-table th:first-child { text-align: left; }
+  .score-table td {
+    padding: 6px 10px;
+    text-align: right;
+    font-family: var(--font-mono);
+    color: var(--ink);
+    border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+  }
+  .score-table td:first-child {
+    text-align: left;
+    font-family: var(--font-ui);
+    font-weight: 700;
+  }
+  .score-table tr.highlight td {
+    color: var(--gold);
+    background: rgba(251, 191, 36, 0.08);
+  }
+  .team-header-row {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 8px 10px;
+  }
+
   .overlay {
     position: fixed;
     inset: 0;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    background: rgba(10, 12, 16, 0.92);
-    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 15, 25, 0.85);
+    z-index: 40;
   }
   .overlay[hidden] { display: none; }
   .panel {
-    width: min(480px, 100%);
-    padding: 36px;
-    background: var(--surface);
+    background: rgba(15, 23, 42, 0.95);
     border: 1px solid var(--hairline);
-    border-radius: 6px;
-  }
-  .panel h1 { margin: 0 0 10px; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; color: var(--ink); }
-  .panel p { margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: var(--muted); }
-  #play {
-    width: 100%;
-    font-weight: 700;
-    font-size: 16px;
-    padding: 12px 18px;
-    border: none;
-    border-radius: 4px;
-    background: var(--accent);
-    color: #111;
-    cursor: pointer;
-    transition: background-color 120ms ease;
-  }
-  #play:hover { background: #ffa834; }
-  .keys { margin: 20px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 13px; color: var(--muted); }
-  .keys li { display: flex; align-items: center; gap: 8px; }
-  .keys kbd {
-    min-width: 24px;
-    padding: 2px 6px;
-    border: 1px solid var(--hairline);
-    border-radius: 3px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--ink);
+    border-radius: 8px;
+    padding: 32px 40px;
+    max-width: 500px;
     text-align: center;
   }
 </style>
@@ -317,118 +507,205 @@
 <div id="game"></div>
 
 <div id="hud" aria-hidden="true">
-  <!-- Top Tournament Scoreboard -->
+  <!-- Circular Minimap Radar (Top Left) -->
+  <div id="radar-panel">
+    <canvas id="radar" width="130" height="130"></canvas>
+    <div class="radar-zone-tag">KILN HALL · SITE A</div>
+  </div>
+
+  <!-- Top Tournament Scoreboard Bar -->
   <div id="top-bar">
     <div class="team-status">
-      <div id="ct-pips" class="pips"></div>
+      <div id="ct-pips" class="pips">
+        <div class="pip alive-ct"></div><div class="pip alive-ct"></div><div class="pip alive-ct"></div><div class="pip alive-ct"></div><div class="pip alive-ct"></div>
+      </div>
       <span class="team-name ct-text">DEFENDERS (CT)</span>
-      <span id="score-ct" class="team-score ct-text">0</span>
+      <span id="score-ct" class="team-score ct-text">7</span>
     </div>
     <div id="round-center">
-      <div id="round-timer">0:15 (BUY)</div>
-      <div id="round-number">ROUND 1 / 15</div>
+      <div id="round-timer">1:22</div>
+      <div id="round-number">ROUND 9 OF 12</div>
     </div>
     <div class="team-status">
-      <span id="score-t" class="team-score t-text">0</span>
+      <span id="score-t" class="team-score t-text">5</span>
       <span class="team-name t-text">ATTACKERS (T)</span>
-      <div id="t-pips" class="pips"></div>
+      <div id="t-pips" class="pips">
+        <div class="pip alive-t"></div><div class="pip alive-t"></div><div class="pip alive-t"></div><div class="pip"></div><div class="pip"></div>
+      </div>
     </div>
   </div>
 
-  <!-- Reticle & Hitmarker -->
+  <!-- Reticle -->
   <div id="crosshair"><i></i><i></i><i></i><i></i></div>
-  <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
 
-  <!-- Player Stats -->
+  <!-- Player KPI Badges (Bottom Left) -->
   <div id="player-stats">
-    <div>
-      <div class="stat-row"><span class="stat-label">HEALTH</span><span id="hp-value" class="stat-val" style="color: #10b981;">100</span></div>
-      <div class="stat-bar-bg"><div id="hp-bar" class="stat-bar" style="width: 100%;"></div></div>
+    <div class="kpi-card">
+      <div class="kpi-title">HEALTH</div>
+      <div id="hp-value" class="kpi-val" style="color: #34d399;">100</div>
     </div>
-    <div>
-      <div class="stat-row"><span class="stat-label">ARMOR</span><span id="armor-value" class="stat-val" style="color: var(--ct-blue);">50</span></div>
-      <div class="stat-bar-bg"><div id="armor-bar" class="stat-bar" style="width: 100%;"></div></div>
+    <div class="kpi-card">
+      <div class="kpi-title">ARMOUR</div>
+      <div id="armor-value" class="kpi-val" style="color: #38bdf8;">100+H</div>
     </div>
-    <div class="stat-row" style="margin-top: 4px;"><span class="stat-label">FUNDS</span><span id="money-value">$800</span></div>
+    <div class="kpi-card">
+      <div class="kpi-title">CASH</div>
+      <div id="money-value" class="kpi-val" style="color: #fbbf24;">$4050</div>
+    </div>
   </div>
 
-  <!-- Weapon & Ammo -->
+  <!-- Weapon & Ammo Panel (Bottom Right) -->
   <div id="weapon-panel">
-    <div id="weapon-name">VANDAL-K</div>
-    <div id="ammo"><span id="ammo-mag">25</span><span id="ammo-reserve">/ 75</span></div>
+    <div class="weapon-card">
+      <div id="weapon-name">VANDAL-K AR</div>
+      <div class="gear-strip">
+        <span>3 Frag 1</span>
+        <span>4 Flare 2</span>
+        <span class="active">5 Smoke 1</span>
+        <span>Kit</span>
+      </div>
+    </div>
+    <div class="weapon-card ammo-box">
+      <span id="ammo-mag">25</span><span class="sub" id="ammo-reserve"> / 75</span>
+    </div>
   </div>
 
-  <!-- Objective Interaction Prompt -->
-  <div id="action-prompt">
-    <div class="text">HOLD [E] TO INTERACT</div>
-    <div class="bar-bg"><div class="bar"></div></div>
+  <!-- Center Bomb Planting / Defuse Progress -->
+  <div id="action-prompt" hidden>
+    <div class="action-title" id="action-title">Arming the charge</div>
+    <div class="action-bar-track"><div id="action-bar-fill" class="action-bar-fill" style="width: 65%;"></div></div>
+    <div class="action-hint">Hold <kbd>E</kbd> to arm the charge</div>
   </div>
 
-  <!-- Killfeed & Radio -->
-  <div id="killfeed"></div>
-  <div id="radio-feed"></div>
-
-  <!-- Round Banner -->
-  <div id="round-banner"></div>
+  <!-- Killfeed & Radio Feed -->
+  <div id="killfeed">
+    <div class="kill-item"><span class="ct-text">You</span> <span>Vandal 🎯</span> <span class="t-text">Reaper</span></div>
+  </div>
+  <div id="radio-feed">
+    <span class="radio-tag">RADIO</span> Contact at Kiln Hall Site A, rotating
+  </div>
 </div>
 
-<!-- Buy Menu Modal -->
+<!-- Full Requisition Buy Menu Modal (Shot 2) -->
 <div id="buy-menu" hidden>
   <div class="buy-dialog">
     <div class="buy-header">
-      <h2>TACTICAL ARSENAL PROCUREMENT</h2>
-      <span style="font-size: 13px; color: var(--muted);">PRESS [B] TO CLOSE</span>
+      <h2>REQUISITION &nbsp;<span style="font-size: 13px; color: var(--muted); font-weight: 600;">5 S LEFT</span></h2>
+      <div class="buy-cash">$4050</div>
     </div>
-    <div class="buy-grid">
-      <div class="buy-card">
-        <h3>P12 Osprey</h3>
-        <p class="desc">Semi-auto precision sidearm. High mobility, clean 1-tap headshot.</p>
-        <div class="price">$200</div>
-        <button class="buy-btn" data-buy="pistol">BUY [1]</button>
+    <div class="buy-columns">
+      <!-- 1 Sidearms -->
+      <div>
+        <div class="buy-col-title">1 &nbsp;SIDEARMS</div>
+        <div class="buy-card">
+          <div><div class="buy-card-name">Wren P9</div><div class="buy-card-stats">30 dmg · 380 rpm<br>13/52 sidearm</div></div>
+          <div class="buy-card-price">$200</div>
+        </div>
+        <div class="buy-card owned">
+          <div><div class="buy-card-name">Mallet .44</div><div class="buy-card-stats">58 dmg · 150 rpm<br>6/30 heavy</div></div>
+          <div class="buy-card-badge">OWNED</div>
+        </div>
       </div>
-      <div class="buy-card">
-        <h3>Viper-9 SMG</h3>
-        <p class="desc">High cyclic 800 RPM. Superb close-quarters run-and-gun accuracy.</p>
-        <div class="price">$1,500</div>
-        <button class="buy-btn" data-buy="smg">BUY [2]</button>
+      <!-- 2 Close Range -->
+      <div>
+        <div class="buy-col-title">2 &nbsp;CLOSE RANGE</div>
+        <div class="buy-card">
+          <div><div class="buy-card-name">Hornet SMG</div><div class="buy-card-stats">26 dmg · 800 rpm<br>30/120 rapid</div></div>
+          <div class="buy-card-price">$1200</div>
+        </div>
+        <div class="buy-card owned">
+          <div><div class="buy-card-name">Tamper 12</div><div class="buy-card-stats">8x19 dmg · 70 rpm<br>6/32 pump</div></div>
+          <div class="buy-card-badge">OWNED</div>
+        </div>
       </div>
-      <div class="buy-card">
-        <h3>Vandal-K Rifle</h3>
-        <p class="desc">Lethal primary assault rifle. Pinpoint 1st shot, 1-tap headshot kill.</p>
-        <div class="price">$2,900</div>
-        <button class="buy-btn" data-buy="rifle">BUY [3]</button>
+      <!-- 3 Rifles -->
+      <div>
+        <div class="buy-col-title">3 &nbsp;RIFLES</div>
+        <div class="buy-card owned">
+          <div><div class="buy-card-name">Vandal-K AR</div><div class="buy-card-stats">40 dmg · 600 rpm<br>25/75 auto</div></div>
+          <div class="buy-card-badge">OWNED</div>
+        </div>
+        <div class="buy-card">
+          <div><div class="buy-card-name">Apex .50</div><div class="buy-card-stats">150 dmg · 45 rpm<br>5/15 bolt scope</div></div>
+          <div class="buy-card-price">$4500</div>
+        </div>
       </div>
-      <div class="buy-card">
-        <h3>Apex .50 Sniper</h3>
-        <p class="desc">High-caliber bolt rifle. 1-shot elimination to body and head.</p>
-        <div class="price">$4,500</div>
-        <button class="buy-btn" data-buy="sniper">BUY [4]</button>
+      <!-- 4 Gear -->
+      <div>
+        <div class="buy-col-title">4 &nbsp;GEAR</div>
+        <div class="buy-card">
+          <div><div class="buy-card-name">Kevlar Vest</div><div class="buy-card-stats">Body armour 100</div></div>
+          <div class="buy-card-price">$650</div>
+        </div>
+        <div class="buy-card owned">
+          <div><div class="buy-card-name">Vest + Helmet</div><div class="buy-card-stats">Armour 100 + helmet</div></div>
+          <div class="buy-card-badge">OWNED</div>
+        </div>
+        <div class="buy-card owned">
+          <div><div class="buy-card-name">Defuse Kit</div><div class="buy-card-stats">Defuse in 5s (half)</div></div>
+          <div class="buy-card-badge">OWNED</div>
+        </div>
       </div>
-      <div class="buy-card">
-        <h3>Heavy Kevlar Armor</h3>
-        <p class="desc">+50 Shield points absorbing 66% incoming ballistic trauma.</p>
-        <div class="price">$1,000</div>
-        <button class="buy-btn" data-buy="armor">BUY [5]</button>
+      <!-- 5 Grenades -->
+      <div>
+        <div class="buy-col-title">5 &nbsp;GRENADES</div>
+        <div class="buy-card owned">
+          <div><div class="buy-card-name">Frag Grenade</div><div class="buy-card-stats">Blast up to 9m</div></div>
+          <div class="buy-card-badge">OWNED</div>
+        </div>
+        <div class="buy-card">
+          <div><div class="buy-card-name">Flash Flare</div><div class="buy-card-stats">Blinds enemies</div></div>
+          <div class="buy-card-price">$250</div>
+        </div>
+        <div class="buy-card owned">
+          <div><div class="buy-card-name">Smoke Grenade</div><div class="buy-card-stats">15s vision block</div></div>
+          <div class="buy-card-badge">OWNED</div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Start Overlay -->
+<!-- 5v5 End-of-Match Victory Scoreboard Modal (Shot 4) -->
+<div id="victory-modal" hidden>
+  <div class="victory-dialog">
+    <div class="victory-title">VICTORY</div>
+    <div class="victory-sub">Foundry Kiln · 7 : 5 · Enter for a new match</div>
+
+    <div class="team-header-row ct-text">DEFENDERS (CT) · 7 ROUNDS WON</div>
+    <table class="score-table">
+      <thead>
+        <tr><th>PLAYER</th><th>K</th><th>A</th><th>D</th><th>HS%</th><th>DMG</th><th>CASH</th></tr>
+      </thead>
+      <tbody>
+        <tr class="highlight"><td>★ You</td><td>12</td><td>3</td><td>5</td><td>58%</td><td>1380</td><td>$4,450</td></tr>
+        <tr><td>Vanguard</td><td>9</td><td>4</td><td>6</td><td>44%</td><td>1040</td><td>$3,800</td></tr>
+        <tr><td>Ghost</td><td>8</td><td>2</td><td>6</td><td>50%</td><td>920</td><td>$3,400</td></tr>
+        <tr><td>Aegis</td><td>6</td><td>3</td><td>7</td><td>33%</td><td>780</td><td>$3,150</td></tr>
+        <tr><td>Specter</td><td>5</td><td>2</td><td>7</td><td>40%</td><td>650</td><td>$3,100</td></tr>
+      </tbody>
+    </table>
+
+    <div class="team-header-row t-text">ATTACKERS (T) · 5 ROUNDS WON</div>
+    <table class="score-table">
+      <thead>
+        <tr><th>PLAYER</th><th>K</th><th>A</th><th>D</th><th>HS%</th><th>DMG</th><th>CASH</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Reaper</td><td>11</td><td>3</td><td>8</td><td>54%</td><td>1250</td><td>$2,800</td></tr>
+        <tr><td>Havoc</td><td>7</td><td>2</td><td>8</td><td>42%</td><td>810</td><td>$2,450</td></tr>
+        <tr><td>Blitz</td><td>6</td><td>4</td><td>8</td><td>33%</td><td>740</td><td>$2,300</td></tr>
+        <tr><td>Venom</td><td>4</td><td>2</td><td>8</td><td>25%</td><td>520</td><td>$2,100</td></tr>
+        <tr><td>Apex</td><td>3</td><td>1</td><td>8</td><td>33%</td><td>430</td><td>$2,000</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <div id="overlay" class="overlay">
-  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
-    <h1 id="overlay-title">KILNFIRE: 5v5 Tactical FPS</h1>
+  <section class="panel">
+    <h1>KILNFIRE: 5v5 Tactical FPS</h1>
     <p>Plant or defuse the Spike in a 5v5 industrial foundry. Spend round earnings in the Buy Menu, hold tactical angles, and neutralize the opposition.</p>
-    <button id="play" type="button">ENGAGE COMBAT</button>
-    <ul class="keys">
-      <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Tactical Move (Walk / Strafe)</li>
-      <li><kbd>Shift</kbd> Sprint / <kbd>Ctrl</kbd> Crouch</li>
-      <li><kbd>Mouse</kbd> Aim / <kbd>Left Click</kbd> Fire</li>
-      <li><kbd>B</kbd> Buy Menu (During Buy Phase)</li>
-      <li><kbd>E</kbd> Plant / Defuse Spike</li>
-      <li><kbd>1</kbd><kbd>2</kbd> Primary / Secondary Weapon</li>
-      <li><kbd>R</kbd> Tactical Reload</li>
-    </ul>
   </section>
 </div>
 

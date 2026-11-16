@@ -1,19 +1,24 @@
 // KILNFIRE Tactical FPS Color Palette & Theme System
-// Unified palette for industrial foundry map, player/bot team uniforms, and tactical HUD
+// Unified palette for Mediterranean/desert tactical map, operator uniforms, and tactical HUD
 export const PALETTE = {
-  canvas: '#0f1115',     // Deep industrial void & atmospheric fog
-  surface: '#1b1f26',    // Structural steel and factory perimeter walls
-  hairline: '#2d3440',   // Wall trims, floor panel seams, architectural framing
-  ink: '#f0ede6',        // High-contrast readout ink and polished weapon alloys
-  muted: '#8490a0',      // Low-priority UI, shadows, distant geometry
-  accent: '#ff9f1c',     // Warm industrial amber: muzzle flashes, alerts, core sparks
-  ctBlue: '#3a86ff',     // Defender (Security Forces) team color & armor shield
-  tRust: '#e63946',      // Attacker (Infiltrators) team color & active bomb hazard
-  siteA: '#06d6a0',      // Bomb Site Alpha designation color
-  siteB: '#ffd166',      // Bomb Site Bravo designation color
-  brickDark: '#5c2a1e',  // Weathered kiln brick dark tone
-  brickLight: '#8a4030', // Kiln brick highlight tone
-  concrete: '#333a44',   // Polished industrial pavement slab
-  crateMetal: '#232931', // Metal shipping container dark alloy
-  warningYellow: '#f4a261', // Safety yellow for plant zone stripes
+  canvas: '#7ca6c9',        // Sunlit Mediterranean tactical sky
+  skyHorizon: '#c5dbe9',    // Atmospheric horizon haze
+  groundBounce: '#d1b894',  // Warm sandstone bounce light
+  sunLight: '#fff6e5',      // Direct warm sun illumination
+  surface: '#2a313d',       // Structural reinforced steel & dark trim
+  hairline: '#3d4757',      // Architectural seams & frames
+  ink: '#f4f6fa',           // Clean tactical readout text & HUD
+  muted: '#8e9ab0',         // Subdued UI, range markers, shadows
+  accent: '#ff9f1c',        // High-intensity amber: muzzle flash, alerts, sparks
+  ctBlue: '#2563eb',        // Defender (Counter-Terrorist) tactical uniform & armor
+  tRust: '#dc2626',         // Attacker (Terrorist) tactical uniform & spike hazard
+  siteA: '#10b981',         // Bomb Site Alpha emerald beacon
+  siteB: '#f59e0b',         // Bomb Site Bravo amber beacon
+  brickDark: '#78351f',     // Terracotta kiln brick shadow
+  brickLight: '#b45309',    // Sun-baked terracotta brick highlight
+  concrete: '#9ca3af',      // Sunlit sandstone pavement & concrete slabs
+  concreteDark: '#6b7280',  // Concrete slab seams & shaded pavings
+  crateWood: '#92400e',     // Tactical military wooden supply crate
+  crateMetal: '#374151',    // Olive-drab reinforced steel shipping container
+  warningYellow: '#fbbf24', // Hazard stripes for bomb plant platforms
 };

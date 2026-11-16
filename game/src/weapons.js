@@ -1,4 +1,4 @@
-// Tactical Arsenal Engine for KILNFIRE: Hitscan Ballistics, Viewmodels, Recoil & Spray Mechanics
+// Tactical Arsenal Engine for KILNFIRE: Hitscan Ballistics, Viewmodels with Hands, Recoil & Spray Mechanics
 import * as THREE from 'three';
 import { PALETTE } from './palette.js';
 
@@ -67,16 +67,32 @@ export const WEAPON_DEFS = {
     recoilYaw: 0.018,
     auto: false,
   },
+  spike: {
+    name: 'C4 Spike',
+    type: 'objective',
+    price: 0,
+    magSize: 1,
+    reserve: 0,
+    fireGap: 1.0,
+    reloadTime: 0,
+    damageBody: 500,
+    damageHead: 500,
+    spreadStill: 0,
+    spreadMoving: 0,
+    recoilPitch: 0,
+    recoilYaw: 0,
+    auto: false,
+  },
 };
 
 export function createWeaponsSystem(camera, scene, audioEngine) {
   const metalMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(PALETTE.ink),
+    color: new THREE.Color(PALETTE.crateMetal),
     roughness: 0.35,
     metalness: 0.8,
   });
   const darkMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(PALETTE.hairline),
+    color: new THREE.Color(PALETTE.surface),
     roughness: 0.7,
     metalness: 0.2,
   });
@@ -85,32 +101,83 @@ export function createWeaponsSystem(camera, scene, audioEngine) {
     roughness: 0.4,
     metalness: 0.5,
   });
+  const sleeveMat = new THREE.MeshStandardMaterial({
+    color: 0x1e3a4c, // Deep navy CT operator sleeve
+    roughness: 0.85,
+    metalness: 0.1,
+  });
+  const gloveMat = new THREE.MeshStandardMaterial({
+    color: 0x22262b, // Tactical reinforced leather glove
+    roughness: 0.6,
+    metalness: 0.25,
+  });
+  const spikeCanisterMat = new THREE.MeshStandardMaterial({
+    color: 0x4d7c0f, // Olive-drab explosive canisters
+    roughness: 0.5,
+    metalness: 0.3,
+  });
 
   const weaponRoot = new THREE.Group();
-  weaponRoot.position.set(0.22, -0.2, -0.42);
+  weaponRoot.position.set(0.2, -0.22, -0.42);
   camera.add(weaponRoot);
 
-  // Muzzle flash
-  const flash = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.26, 0.26),
-    new THREE.MeshBasicMaterial({
-      color: new THREE.Color(PALETTE.accent),
-      transparent: true,
-      opacity: 0.9,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    }),
-  );
-  flash.position.set(0.22, -0.17, -0.96);
-  flash.visible = false;
-  camera.add(flash);
+  // Multi-pointed 3D Muzzle Flash Star
+  const flashGroup = new THREE.Group();
+  const flashMat = new THREE.MeshBasicMaterial({
+    color: 0xfff380,
+    transparent: true,
+    opacity: 0.95,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const flashOrangeMat = new THREE.MeshBasicMaterial({
+    color: 0xff7700,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
 
-  const flashLight = new THREE.PointLight(new THREE.Color(PALETTE.accent), 0, 7);
-  flashLight.position.set(0.22, -0.15, -0.6);
+  // Cross flares
+  const flare1 = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.08), flashMat);
+  const flare2 = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.32), flashMat);
+  const flare3 = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), flashOrangeMat);
+  flare3.rotation.z = Math.PI / 4;
+  const coreSpark = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+
+  flashGroup.add(flare1, flare2, flare3, coreSpark);
+  flashGroup.position.set(0.2, -0.19, -0.96);
+  flashGroup.visible = false;
+  camera.add(flashGroup);
+
+  const flashLight = new THREE.PointLight(0xffaa33, 0, 9);
+  flashLight.position.set(0.2, -0.17, -0.6);
   camera.add(flashLight);
 
   // Procedural viewmodels for each weapon type
   const viewmodels = {};
+
+  function addArmsToGroup(group, leftHandPos, rightHandPos) {
+    // Right Arm (Trigger Hand)
+    const rForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.32, 8), sleeveMat);
+    rForearm.position.set(rightHandPos.x + 0.1, rightHandPos.y - 0.12, rightHandPos.z + 0.18);
+    rForearm.rotation.set(0.65, -0.2, -0.3);
+
+    const rGlove = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.075, 0.09), gloveMat);
+    rGlove.position.copy(rightHandPos);
+    rGlove.rotation.set(-0.25, 0, 0);
+
+    // Left Arm (Handguard Support Hand)
+    const lForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.052, 0.36, 8), sleeveMat);
+    lForearm.position.set(leftHandPos.x - 0.14, leftHandPos.y - 0.14, leftHandPos.z + 0.16);
+    lForearm.rotation.set(0.75, 0.35, 0.45);
+
+    const lGlove = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.07, 0.09), gloveMat);
+    lGlove.position.copy(leftHandPos);
+    lGlove.rotation.set(0.15, 0.2, -0.3);
+
+    group.add(rForearm, rGlove, lForearm, lGlove);
+  }
 
   function buildPistolModel() {
     const group = new THREE.Group();
@@ -122,6 +189,9 @@ export function createWeaponsSystem(camera, scene, audioEngine) {
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 8), darkMat);
     barrel.rotation.x = Math.PI / 2;
     barrel.position.set(0, 0.03, -0.07);
+
+    // Two-handed pistol grip
+    addArmsToGroup(group, new THREE.Vector3(-0.02, -0.06, 0.02), new THREE.Vector3(0.02, -0.06, 0.02));
     group.add(slide, grip, barrel);
     return group;
   }
@@ -140,6 +210,8 @@ export function createWeaponsSystem(camera, scene, audioEngine) {
     barrel.position.set(0, 0.02, -0.22);
     const redDot = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.08), accentMat);
     redDot.position.set(0, 0.06, 0.02);
+
+    addArmsToGroup(group, new THREE.Vector3(-0.04, -0.03, -0.16), new THREE.Vector3(0.02, -0.06, 0.09));
     group.add(receiver, mag, grip, barrel, redDot);
     return group;
   }
@@ -159,6 +231,9 @@ export function createWeaponsSystem(camera, scene, audioEngine) {
     curvedMag.rotation.x = 0.28;
     const sight = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.035, 0.05), accentMat);
     sight.position.set(0, 0.065, -0.15);
+
+    // Operator gloved arms cradling rifle
+    addArmsToGroup(group, new THREE.Vector3(-0.035, -0.03, -0.24), new THREE.Vector3(0.02, -0.06, 0.12));
     group.add(receiver, handguard, barrel, stock, curvedMag, sight);
     return group;
   }
@@ -176,7 +251,38 @@ export function createWeaponsSystem(camera, scene, audioEngine) {
     scope.position.set(0, 0.085, -0.05);
     const stock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.28), darkMat);
     stock.position.set(0, -0.02, 0.38);
+
+    addArmsToGroup(group, new THREE.Vector3(-0.04, -0.03, -0.28), new THREE.Vector3(0.02, -0.06, 0.16));
     group.add(body, longBarrel, muzzleBrake, scope, stock);
+    return group;
+  }
+
+  function buildSpikeModel() {
+    const group = new THREE.Group();
+    // Central core
+    const core = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.11, 0.24), darkMat);
+    // Two explosive canisters
+    const can1 = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.26, 12), spikeCanisterMat);
+    can1.rotation.x = Math.PI / 2;
+    can1.position.set(-0.11, -0.02, 0);
+    const can2 = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.26, 12), spikeCanisterMat);
+    can2.rotation.x = Math.PI / 2;
+    can2.position.set(0.11, -0.02, 0);
+
+    // Glowing LED countdown keypad
+    const keypad = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.02, 0.12),
+      new THREE.MeshBasicMaterial({ color: 0xff5500 }),
+    );
+    keypad.position.set(0, 0.065, 0);
+
+    // Both hands holding the bomb in front
+    const rGlove = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.1), gloveMat);
+    rGlove.position.set(0.16, -0.01, 0);
+    const lGlove = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.1), gloveMat);
+    lGlove.position.set(-0.16, -0.01, 0);
+
+    group.add(core, can1, can2, keypad, rGlove, lGlove);
     return group;
   }
 
@@ -184,6 +290,7 @@ export function createWeaponsSystem(camera, scene, audioEngine) {
   viewmodels.smg = buildSmgModel();
   viewmodels.rifle = buildRifleModel();
   viewmodels.sniper = buildSniperModel();
+  viewmodels.spike = buildSpikeModel();
 
   for (const model of Object.values(viewmodels)) {
     weaponRoot.add(model);
@@ -192,101 +299,85 @@ export function createWeaponsSystem(camera, scene, audioEngine) {
 
   // Active loadout
   const inventory = {
-    primary: 'rifle', // or 'smg', 'sniper'
+    primary: 'rifle',
     sidearm: 'pistol',
     armor: 50,
-    hasBomb: false,
-    ammo: {
-      pistol: { mag: WEAPON_DEFS.pistol.magSize, reserve: WEAPON_DEFS.pistol.reserve },
-      smg: { mag: WEAPON_DEFS.smg.magSize, reserve: WEAPON_DEFS.smg.reserve },
-      rifle: { mag: WEAPON_DEFS.rifle.magSize, reserve: WEAPON_DEFS.rifle.reserve },
-      sniper: { mag: WEAPON_DEFS.sniper.magSize, reserve: WEAPON_DEFS.sniper.reserve },
-    },
+    hasSpike: false,
   };
 
-  let activeSlot = 'primary'; // 'primary' or 'sidearm'
+  const ammoPool = {
+    pistol: { mag: WEAPON_DEFS.pistol.magSize, reserve: WEAPON_DEFS.pistol.reserve },
+    smg: { mag: WEAPON_DEFS.smg.magSize, reserve: WEAPON_DEFS.smg.reserve },
+    rifle: { mag: WEAPON_DEFS.rifle.magSize, reserve: WEAPON_DEFS.rifle.reserve },
+    sniper: { mag: WEAPON_DEFS.sniper.magSize, reserve: WEAPON_DEFS.sniper.reserve },
+    spike: { mag: 1, reserve: 0 },
+  };
+
   let currentKey = 'rifle';
+  let activeSlot = 'primary';
   viewmodels[currentKey].visible = true;
 
   const state = {
     fireTimer: 0,
     reloadTimer: 0,
-    reloading: false,
-    muzzleTimer: 0,
-    swayTime: 0,
     recoilPitchAcc: 0,
     recoilYawAcc: 0,
-    scoped: false,
+    muzzleTimer: 0,
+    breatheTime: 0,
   };
-
-  // Visual Tracers
-  const tracers = [];
-  const tracerMat = new THREE.LineBasicMaterial({
-    color: new THREE.Color(PALETTE.accent),
-    transparent: true,
-    opacity: 0.85,
-  });
-
-  function addTracer(start, end) {
-    const geom = new THREE.BufferGeometry().setFromPoints([start, end]);
-    const line = new THREE.Line(geom, tracerMat);
-    scene.add(line);
-    tracers.push({ line, life: 0.05 });
-  }
 
   function switchWeapon(key) {
     if (!WEAPON_DEFS[key]) return;
+    if (state.reloadTimer > 0) return;
     currentKey = key;
     for (const [k, m] of Object.entries(viewmodels)) {
-      m.visible = k === currentKey;
+      m.visible = k === key;
     }
-    state.reloading = false;
-    state.reloadTimer = 0;
-    state.fireTimer = 0.2; // Quick draw delay
+    audioEngine.weaponEquip(key);
   }
 
   return {
     inventory,
+    ammoPool,
     state,
-    getCurrentDef() {
+    get currentDef() {
       return WEAPON_DEFS[currentKey];
     },
-    getCurrentKey() {
+    get currentKey() {
       return currentKey;
     },
-    getCurrentAmmo() {
-      return inventory.ammo[currentKey];
-    },
     switchSlot(slot) {
-      if (slot === 'primary' && inventory.primary) {
+      if (slot === 'primary') {
         activeSlot = 'primary';
         switchWeapon(inventory.primary);
       } else if (slot === 'sidearm') {
         activeSlot = 'sidearm';
         switchWeapon(inventory.sidearm);
+      } else if (slot === 'spike') {
+        activeSlot = 'spike';
+        switchWeapon('spike');
       }
     },
-    equip(weaponKey) {
+    buyWeapon(weaponKey, price) {
       const def = WEAPON_DEFS[weaponKey];
-      if (!def) return;
+      if (!def) return false;
       if (def.type === 'primary') {
         inventory.primary = weaponKey;
         activeSlot = 'primary';
-      } else {
+        switchWeapon(weaponKey);
+      } else if (def.type === 'sidearm') {
         inventory.sidearm = weaponKey;
         activeSlot = 'sidearm';
+        switchWeapon(weaponKey);
       }
-      inventory.ammo[weaponKey].mag = def.magSize;
-      inventory.ammo[weaponKey].reserve = def.reserve;
-      switchWeapon(weaponKey);
+      ammoPool[weaponKey].mag = def.magSize;
+      ammoPool[weaponKey].reserve = def.reserve;
+      return true;
     },
-    canFire() {
-      const ammo = inventory.ammo[currentKey];
-      return !state.reloading && state.fireTimer <= 0 && ammo.mag > 0;
-    },
-    fire(groundSpeed, isCrouching) {
+    fire(groundSpeed = 0, isCrouching = false) {
+      if (state.fireTimer > 0 || state.reloadTimer > 0) return null;
       const def = WEAPON_DEFS[currentKey];
-      const ammo = inventory.ammo[currentKey];
+      const ammo = ammoPool[currentKey];
       if (ammo.mag <= 0) {
         audioEngine.emptyClick();
         state.fireTimer = 0.25;
@@ -295,15 +386,15 @@ export function createWeaponsSystem(camera, scene, audioEngine) {
 
       ammo.mag -= 1;
       state.fireTimer = def.fireGap;
-      state.muzzleTimer = 0.05;
+      state.muzzleTimer = 0.06;
 
       // Audio
       audioEngine.gunshot(currentKey);
 
       // Flash
-      flash.visible = true;
-      flash.rotation.z = Math.random() * Math.PI * 2;
-      flashLight.intensity = currentKey === 'sniper' ? 5.0 : 2.8;
+      flashGroup.visible = true;
+      flashGroup.rotation.z = Math.random() * Math.PI * 2;
+      flashLight.intensity = currentKey === 'sniper' ? 5.5 : 3.2;
 
       // Recoil kickback on weapon model
       weaponRoot.position.z = -0.34;
@@ -319,92 +410,69 @@ export function createWeaponsSystem(camera, scene, audioEngine) {
       if (isCrouching) spread *= 0.65;
 
       return {
-        spread,
         damageBody: def.damageBody,
         damageHead: def.damageHead,
+        spread,
         pitchKick: def.recoilPitch,
-        yawKick: (Math.random() - 0.5) * def.recoilYaw,
+        yawKick: def.recoilYaw,
       };
+    },
+    showCombatMuzzleFlash() {
+      flashGroup.visible = true;
+      flashLight.intensity = 3.5;
+      weaponRoot.position.z = -0.36;
+      weaponRoot.rotation.x = 0.08;
     },
     reload() {
       const def = WEAPON_DEFS[currentKey];
-      const ammo = inventory.ammo[currentKey];
-      if (state.reloading || ammo.mag === def.magSize || ammo.reserve <= 0) return false;
-      state.reloading = true;
+      const ammo = ammoPool[currentKey];
+      if (state.reloadTimer > 0 || ammo.mag >= def.magSize || ammo.reserve <= 0) return;
       state.reloadTimer = def.reloadTime;
-      audioEngine.reload();
-      return true;
+      audioEngine.reloadStart();
     },
-    addTracer,
-    reset() {
-      state.fireTimer = 0;
-      state.reloadTimer = 0;
-      state.reloading = false;
-      state.muzzleTimer = 0;
-      state.recoilPitchAcc = 0;
-      state.recoilYawAcc = 0;
-      for (const [k, def] of Object.entries(WEAPON_DEFS)) {
-        inventory.ammo[k].mag = def.magSize;
-        inventory.ammo[k].reserve = def.reserve;
+    update(dt) {
+      state.breatheTime += dt * 2.2;
+      const bobX = Math.sin(state.breatheTime * 0.5) * 0.003;
+      const bobY = Math.cos(state.breatheTime) * 0.003;
+      weaponRoot.position.x = 0.2 + bobX;
+      weaponRoot.position.y = -0.22 + bobY;
+
+      // Fire timer decay
+      if (state.fireTimer > 0) state.fireTimer -= dt;
+
+      // Reload completion
+      if (state.reloadTimer > 0) {
+        state.reloadTimer -= dt;
+        weaponRoot.rotation.x = -0.4 * Math.sin((state.reloadTimer / WEAPON_DEFS[currentKey].reloadTime) * Math.PI);
+        if (state.reloadTimer <= 0) {
+          const def = WEAPON_DEFS[currentKey];
+          const ammo = ammoPool[currentKey];
+          const needed = def.magSize - ammo.mag;
+          const transfer = Math.min(needed, ammo.reserve);
+          ammo.mag += transfer;
+          ammo.reserve -= transfer;
+          state.reloadTimer = 0;
+          weaponRoot.rotation.x = 0;
+          audioEngine.reloadFinish();
+        }
       }
-      switchWeapon(inventory.primary || 'rifle');
-    },
-    step(dt, groundSpeed, isCrouching) {
-      state.fireTimer = Math.max(0, state.fireTimer - dt);
 
       // Muzzle flash decay
       if (state.muzzleTimer > 0) {
         state.muzzleTimer -= dt;
         if (state.muzzleTimer <= 0) {
-          flash.visible = false;
+          flashGroup.visible = false;
           flashLight.intensity = 0;
         }
       }
 
-      // Recoil recovery
-      state.recoilPitchAcc = Math.max(0, state.recoilPitchAcc - dt * 0.12);
-      state.recoilYawAcc *= Math.max(0, 1 - dt * 10);
+      // Weapon kickback recovery
+      weaponRoot.position.z += (-0.42 - weaponRoot.position.z) * dt * 14;
+      weaponRoot.rotation.x += (0 - weaponRoot.rotation.x) * dt * 12;
 
-      // Viewmodel position recovery
-      weaponRoot.position.z += (-0.42 - weaponRoot.position.z) * Math.min(1, dt * 20);
-      weaponRoot.rotation.x += (0 - weaponRoot.rotation.x) * Math.min(1, dt * 18);
-
-      // Reload animation
-      const def = WEAPON_DEFS[currentKey];
-      const ammo = inventory.ammo[currentKey];
-      if (state.reloading) {
-        state.reloadTimer -= dt;
-        const progress = 1 - Math.max(0, state.reloadTimer) / def.reloadTime;
-        weaponRoot.position.y = -0.2 - Math.sin(progress * Math.PI) * 0.14;
-        weaponRoot.rotation.x = -Math.sin(progress * Math.PI) * 0.5;
-        if (state.reloadTimer <= 0) {
-          state.reloading = false;
-          const need = def.magSize - ammo.mag;
-          const take = Math.min(need, ammo.reserve);
-          ammo.mag += take;
-          ammo.reserve -= take;
-          weaponRoot.position.y = -0.2;
-          weaponRoot.rotation.x = 0;
-        }
-      } else {
-        // Natural weapon sway & breathing bob
-        state.swayTime += dt * (groundSpeed > 0.1 ? 8 : 2);
-        const swayAmp = groundSpeed > 0.1 ? 0.016 : 0.003;
-        weaponRoot.position.x = 0.22 + Math.cos(state.swayTime * 0.5) * swayAmp;
-        weaponRoot.position.y = -0.2 + Math.sin(state.swayTime) * swayAmp;
-      }
-
-      // Update bullet tracers
-      for (let i = tracers.length - 1; i >= 0; i--) {
-        const tr = tracers[i];
-        tr.life -= dt;
-        if (tr.life <= 0) {
-          scene.remove(tr.line);
-          tr.line.geometry.dispose();
-          tracers.splice(i, 1);
-        }
-      }
+      // Recoil accumulation recovery
+      state.recoilPitchAcc += (0 - state.recoilPitchAcc) * dt * 4.5;
+      state.recoilYawAcc += (0 - state.recoilYawAcc) * dt * 4.5;
     },
   };
 }
-

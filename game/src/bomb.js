@@ -106,6 +106,9 @@ export function createBombSystem(scene, siteZones, audioEngine) {
       bombGroup.visible = false;
       bombLight.intensity = 0;
     },
+    update(dt) {
+      this.step(dt);
+    },
     step(dt, onBombPlanted, onBombDefused, onBombDetonated) {
       // 1. Planting phase
       if (state.status === 'PLANTING') {
